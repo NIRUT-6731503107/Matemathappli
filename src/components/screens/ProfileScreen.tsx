@@ -1,24 +1,36 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/lib/useAppStore";
+import { getProfile, updateProfile } from "@/lib/api";
 import { INTEREST_LABELS } from "@/lib/appState";
+import { getUserInterests } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
-import { Settings, Edit3, Heart, Users, Bookmark, ChevronRight } from "lucide-react";
+import { Settings, Edit3, Heart, Bookmark, Users, ChevronRight } from "lucide-react";
 
 export default function ProfileScreen() {
-  const { currentUser, selectedInterests, matches, savedMatches, setScreen } = useAppStore();
+  const { user } = useAuth();
+  const { setScreen } = useAppStore();
+  const [profile, setProfile] = useState<any>(null);
+  const [interests, setInterests] = useState<string[]>([]);
 
-  if (!currentUser) return null;
+  useEffect(() => {
+    if (!user) return;
+    getProfile(user.id).then(setProfile);
+    getUserInterests(user.id).then(setInterests);
+  }, [user]);
+
+  if (!profile) return null;
 
   const stats = [
-    { label: "Matches", value: matches.length, icon: Heart, color: "text-pink-400" },
-    { label: "Saved", value: savedMatches.length, icon: Bookmark, color: "text-primary" },
-    { label: "Interests", value: selectedInterests.length, icon: Users, color: "text-accent" },
+    { label: "Interests", value: interests.length, icon: Heart, color: "text-pink-400" },
+    { label: "Matches", value: "—", icon: Users, color: "text-primary" },
+    { label: "Saved", value: "—", icon: Bookmark, color: "text-accent" },
   ];
 
   return (
     <div className="flex-1 flex flex-col bg-background">
-      {/* Header */}
-      <div className="px-6 pt-4 pb-2 flex items-center justify-between">
+      <div className="px-6 pt-5 pb-2 flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Profile</h1>
         <button
           onClick={() => setScreen("settings")}
@@ -29,7 +41,6 @@ export default function ProfileScreen() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-4">
-        {/* Profile Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -38,16 +49,18 @@ export default function ProfileScreen() {
           <div className="absolute top-0 left-0 right-0 h-20 gradient-primary opacity-10" />
           <div className="relative flex flex-col items-center">
             <div className="w-24 h-24 rounded-3xl gradient-avatar flex items-center justify-center text-5xl shadow-glow mb-4">
-              {currentUser.avatarEmoji}
+              {profile.avatar_emoji}
             </div>
-            <h2 className="text-xl font-bold text-foreground">{currentUser.name}</h2>
+            <h2 className="text-xl font-bold text-foreground">{profile.display_name || "User"}</h2>
             <p className="text-xs text-muted-foreground mt-1">
-              {currentUser.year} • ID: {currentUser.studentId}
+              {profile.year || "Student"}{profile.major ? ` • ${profile.major}` : ""}
             </p>
+            {profile.bio && (
+              <p className="text-xs text-muted-foreground mt-2 text-center italic">"{profile.bio}"</p>
+            )}
           </div>
         </motion.div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           {stats.map((stat, i) => {
             const Icon = stat.icon;
@@ -67,7 +80,6 @@ export default function ProfileScreen() {
           })}
         </div>
 
-        {/* Interests */}
         <div className="glass-card rounded-2xl p-5 mb-5">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-semibold text-foreground">My Interests</span>
@@ -79,41 +91,14 @@ export default function ProfileScreen() {
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {selectedInterests.map((i) => (
-              <span
-                key={i}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/10 text-primary border border-primary/20"
-              >
+            {interests.map((i) => (
+              <span key={i} className="px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                 {INTEREST_LABELS[i] || i}
               </span>
             ))}
-            {selectedInterests.length === 0 && (
-              <p className="text-xs text-muted-foreground">No interests selected yet</p>
-            )}
+            {interests.length === 0 && <p className="text-xs text-muted-foreground">No interests selected</p>}
           </div>
         </div>
-
-        {/* Menu items */}
-        {[
-          { label: "Saved Matches", sub: `${savedMatches.length} profiles saved`, icon: Bookmark },
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.label}
-              className="glass-card rounded-2xl p-4 mb-3 flex items-center gap-3.5 cursor-pointer hover:border-primary/20 transition-all"
-            >
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Icon size={16} className="text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-foreground">{item.label}</div>
-                <div className="text-xs text-muted-foreground">{item.sub}</div>
-              </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
-            </div>
-          );
-        })}
       </div>
       <BottomNav />
     </div>
