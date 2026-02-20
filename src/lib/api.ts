@@ -11,6 +11,12 @@ export interface Profile {
   avatar_emoji: string;
 }
 
+async function getAuthenticatedUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  return user.id;
+}
+
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data } = await supabase
     .from("profiles")
@@ -20,7 +26,8 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data as Profile | null;
 }
 
-export async function updateProfile(userId: string, updates: Partial<Profile>) {
+export async function updateProfile(updates: Partial<Profile>) {
+  const userId = await getAuthenticatedUserId();
   const { error } = await supabase
     .from("profiles")
     .update(updates)
@@ -36,7 +43,8 @@ export async function getUserInterests(userId: string): Promise<string[]> {
   return (data || []).map((d: any) => d.interest_id);
 }
 
-export async function setUserInterests(userId: string, interests: string[]) {
+export async function setUserInterests(interests: string[]) {
+  const userId = await getAuthenticatedUserId();
   // Delete existing
   await supabase.from("user_interests").delete().eq("user_id", userId);
   // Insert new
@@ -82,7 +90,8 @@ export async function getDiscoverProfiles(currentUserId: string) {
   }).sort((a: any, b: any) => b.matchScore - a.matchScore);
 }
 
-export async function swipeAction(userId: string, targetUserId: string, action: "accept" | "reject") {
+export async function swipeAction(targetUserId: string, action: "accept" | "reject") {
+  const userId = await getAuthenticatedUserId();
   const { error } = await supabase
     .from("matches")
     .insert({ user_id: userId, target_user_id: targetUserId, action });
@@ -129,10 +138,15 @@ export async function getMessages(userId: string, otherUserId: string) {
   return data || [];
 }
 
-export async function sendMessage(senderId: string, receiverId: string, content: string) {
+export async function sendMessage(receiverId: string, content: string) {
+  const trimmed = content.trim();
+  if (!trimmed || trimmed.length > 10000) {
+    return { error: new Error("Message must be between 1 and 10000 characters") };
+  }
+  const senderId = await getAuthenticatedUserId();
   const { error } = await supabase
     .from("messages")
-    .insert({ sender_id: senderId, receiver_id: receiverId, content });
+    .insert({ sender_id: senderId, receiver_id: receiverId, content: trimmed });
   return { error };
 }
 

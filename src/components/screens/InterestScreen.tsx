@@ -40,7 +40,7 @@ export default function InterestScreen({ onComplete }: Props) {
     }
     if (!user) return;
     setSaving(true);
-    await setUserInterests(user.id, selected);
+    await setUserInterests(selected);
     setSaving(false);
     if (onComplete) {
       onComplete();

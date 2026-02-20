@@ -27,7 +27,7 @@ export default function HomeScreen() {
   const handleSwipe = async (targetUserId: string, action: "accept" | "reject") => {
     if (!user) return;
     setProfiles((prev) => prev.filter((p) => p.user_id !== targetUserId));
-    await swipeAction(user.id, targetUserId, action);
+    await swipeAction(targetUserId, action);
     if (action === "accept") toast.success("Liked! 💚");
   };
 
