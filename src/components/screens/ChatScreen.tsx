@@ -51,7 +51,7 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (!input.trim() || !user || !chatPartnerId || sending) return;
     setSending(true);
-    await sendMessage(user.id, chatPartnerId, input.trim());
+    await sendMessage(chatPartnerId, input.trim());
     setInput("");
     setSending(false);
   };

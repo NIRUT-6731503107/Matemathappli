@@ -25,7 +25,7 @@ export default function SettingsScreen() {
 
   const handleSave = async () => {
     if (!user) return;
-    await updateProfile(user.id, form);
+    await updateProfile(form);
     setProfile({ ...profile, ...form });
     setEditing(false);
     toast.success("Profile updated!");
