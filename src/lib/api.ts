@@ -1,5 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function validateUUID(id: string): string {
+  if (!UUID_REGEX.test(id)) throw new Error("Invalid UUID");
+  return id;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -18,6 +25,7 @@ async function getAuthenticatedUserId(): Promise<string> {
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
+  validateUUID(userId);
   const { data } = await supabase
     .from("profiles")
     .select("*")
@@ -36,6 +44,7 @@ export async function updateProfile(updates: Partial<Profile>) {
 }
 
 export async function getUserInterests(userId: string): Promise<string[]> {
+  validateUUID(userId);
   const { data } = await supabase
     .from("user_interests")
     .select("interest_id")
@@ -55,6 +64,7 @@ export async function setUserInterests(interests: string[]) {
 }
 
 export async function getDiscoverProfiles(currentUserId: string) {
+  validateUUID(currentUserId);
   // Get profiles excluding current user and already-swiped users
   const { data: swipedData } = await supabase
     .from("matches")
@@ -67,7 +77,7 @@ export async function getDiscoverProfiles(currentUserId: string) {
   const { data: profiles } = await supabase
     .from("profiles")
     .select("*")
-    .not("user_id", "in", `(${excludeIds.join(",")})`);
+    .not("user_id", "in", `(${excludeIds.map(id => validateUUID(id)).join(",")})`);
 
   // Get interests for all fetched profiles
   const userIds = (profiles || []).map((p: any) => p.user_id);
@@ -91,6 +101,7 @@ export async function getDiscoverProfiles(currentUserId: string) {
 }
 
 export async function swipeAction(targetUserId: string, action: "accept" | "reject") {
+  validateUUID(targetUserId);
   const userId = await getAuthenticatedUserId();
   const { error } = await supabase
     .from("matches")
@@ -99,6 +110,7 @@ export async function swipeAction(targetUserId: string, action: "accept" | "reje
 }
 
 export async function getMutualMatches(userId: string) {
+  validateUUID(userId);
   // Get users who I accepted AND who accepted me
   const { data: myAccepts } = await supabase
     .from("matches")
@@ -128,6 +140,8 @@ export async function getMutualMatches(userId: string) {
 }
 
 export async function getMessages(userId: string, otherUserId: string) {
+  validateUUID(userId);
+  validateUUID(otherUserId);
   const { data } = await supabase
     .from("messages")
     .select("*")
@@ -139,6 +153,7 @@ export async function getMessages(userId: string, otherUserId: string) {
 }
 
 export async function sendMessage(receiverId: string, content: string) {
+  validateUUID(receiverId);
   const trimmed = content.trim();
   if (!trimmed || trimmed.length > 10000) {
     return { error: new Error("Message must be between 1 and 10000 characters") };
@@ -151,6 +166,7 @@ export async function sendMessage(receiverId: string, content: string) {
 }
 
 export async function getConversations(userId: string) {
+  validateUUID(userId);
   // Get latest message per conversation partner
   const { data: sent } = await supabase
     .from("messages")
