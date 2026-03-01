@@ -50,9 +50,19 @@ export default function ChatScreen() {
 
   const handleSend = async () => {
     if (!input.trim() || !user || !chatPartnerId || sending) return;
-    setSending(true);
-    await sendMessage(chatPartnerId, input.trim());
+    const text = input.trim();
+    const optimisticMsg = {
+      id: `temp-${Date.now()}`,
+      sender_id: user.id,
+      receiver_id: chatPartnerId,
+      content: text,
+      created_at: new Date().toISOString(),
+      read: false,
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
     setInput("");
+    setSending(true);
+    await sendMessage(chatPartnerId, text);
     setSending(false);
   };
 
