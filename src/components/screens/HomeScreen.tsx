@@ -24,11 +24,18 @@ export default function HomeScreen() {
     loadProfiles();
   }, [user]);
 
+  const [matchPopup, setMatchPopup] = useState<any>(null);
+
   const handleSwipe = async (targetUserId: string, action: "accept" | "reject") => {
     if (!user) return;
+    const matchedProfile = profiles.find((p) => p.user_id === targetUserId);
     setProfiles((prev) => prev.filter((p) => p.user_id !== targetUserId));
-    await swipeAction(targetUserId, action);
-    if (action === "accept") toast.success("Liked! 💚");
+    const { isMutual } = await swipeAction(targetUserId, action);
+    if (isMutual && matchedProfile) {
+      setMatchPopup(matchedProfile);
+    } else if (action === "accept") {
+      toast.success("Liked! 💚");
+    }
   };
 
   const currentProfile = profiles[0];
@@ -77,7 +84,67 @@ export default function HomeScreen() {
         </AnimatePresence>
       </div>
       <BottomNav />
+
+      {/* Match Popup */}
+      <AnimatePresence>
+        {matchPopup && (
+          <MatchPopup
+            profile={matchPopup}
+            onMessage={() => {
+              const { openChat } = useAppStore.getState();
+              openChat(matchPopup.user_id);
+              setMatchPopup(null);
+            }}
+            onClose={() => setMatchPopup(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function MatchPopup({ profile, onMessage, onClose }: { profile: any; onMessage: () => void; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-8"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.7, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className="glass-card rounded-3xl p-8 text-center max-w-[300px] w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-5xl mb-3">🎉</div>
+        <h2 className="text-2xl font-bold text-gradient mb-2">It's a Match!</h2>
+        <p className="text-muted-foreground text-sm mb-5">
+          You and <span className="text-foreground font-semibold">{profile.display_name}</span> liked each other!
+        </p>
+        <div className="w-20 h-20 rounded-3xl gradient-avatar flex items-center justify-center text-4xl shadow-glow mx-auto mb-6">
+          {profile.avatar_emoji || "👤"}
+        </div>
+        <div className="flex flex-col gap-3">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onMessage}
+            className="w-full py-3 btn-primary text-primary-foreground rounded-2xl text-sm font-bold cursor-pointer shadow-glow-sm border-none"
+          >
+            Send a Message 💬
+          </motion.button>
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-secondary text-muted-foreground rounded-2xl text-sm font-medium cursor-pointer border-none hover:text-foreground transition-colors"
+          >
+            Keep Swiping
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
