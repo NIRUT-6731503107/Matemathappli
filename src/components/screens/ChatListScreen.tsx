@@ -1,33 +1,39 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/lib/useAppStore";
-import { getConversations } from "@/lib/api";
+import { getConversations, getMutualMatches } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
-import { Edit, MessageCircle } from "lucide-react";
+import { Edit, MessageCircle, Sparkles } from "lucide-react";
 
 export default function ChatListScreen() {
   const { user } = useAuth();
   const { openChat } = useAppStore();
   const [conversations, setConversations] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadConversations = async () => {
+  const loadData = async () => {
     if (!user) return;
-    const data = await getConversations(user.id);
-    setConversations(data);
+    const [convData, matchData] = await Promise.all([
+      getConversations(user.id),
+      getMutualMatches(user.id),
+    ]);
+    setConversations(convData);
+    // Filter out matches that already have conversations
+    const convPartnerIds = new Set(convData.map((c: any) => c.partnerId));
+    setMatches((matchData || []).filter((m: any) => !convPartnerIds.has(m.user_id)));
     setLoading(false);
   };
 
   useEffect(() => {
-    loadConversations();
+    loadData();
 
-    // Listen for new messages
     const channel = supabase
       .channel("chat-list")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
-        loadConversations();
+        loadData();
       })
       .subscribe();
 
@@ -54,11 +60,36 @@ export default function ChatListScreen() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-5">
+        {/* New Matches */}
+        {matches.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-2.5 font-medium uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles size={12} className="text-primary" /> New Matches
+            </p>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {matches.map((m: any) => (
+                <motion.div
+                  key={m.user_id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
+                  onClick={() => openChat(m.user_id)}
+                >
+                  <div className="w-14 h-14 rounded-2xl gradient-avatar flex items-center justify-center text-2xl shadow-glow-sm ring-2 ring-primary/30">
+                    {m.avatar_emoji || "👤"}
+                  </div>
+                  <span className="text-[10px] text-foreground font-medium w-14 text-center truncate">{m.display_name}</span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
           </div>
-        ) : conversations.length === 0 ? (
+        ) : conversations.length === 0 && matches.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4">
               <MessageCircle size={32} className="text-muted-foreground" />

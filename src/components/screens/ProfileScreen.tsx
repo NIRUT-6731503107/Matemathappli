@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppStore } from "@/lib/useAppStore";
-import { getProfile, updateProfile } from "@/lib/api";
+import { getProfile, updateProfile, getUserInterests, getMutualMatches } from "@/lib/api";
 import { INTEREST_LABELS } from "@/lib/appState";
-import { getUserInterests } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
 import { Settings, Edit3, Heart, Bookmark, Users, ChevronRight } from "lucide-react";
@@ -13,18 +12,20 @@ export default function ProfileScreen() {
   const { setScreen } = useAppStore();
   const [profile, setProfile] = useState<any>(null);
   const [interests, setInterests] = useState<string[]>([]);
+  const [matchCount, setMatchCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     getProfile(user.id).then(setProfile);
     getUserInterests(user.id).then(setInterests);
+    getMutualMatches(user.id).then((m) => setMatchCount(m.length));
   }, [user]);
 
   if (!profile) return null;
 
   const stats = [
     { label: "Interests", value: interests.length, icon: Heart, color: "text-pink-400" },
-    { label: "Matches", value: "—", icon: Users, color: "text-primary" },
+    { label: "Matches", value: matchCount, icon: Users, color: "text-primary" },
     { label: "Saved", value: "—", icon: Bookmark, color: "text-accent" },
   ];
 

@@ -106,7 +106,21 @@ export async function swipeAction(targetUserId: string, action: "accept" | "reje
   const { error } = await supabase
     .from("matches")
     .insert({ user_id: userId, target_user_id: targetUserId, action });
-  return { error };
+
+  // Check for mutual match
+  let isMutual = false;
+  if (action === "accept" && !error) {
+    const { data } = await supabase
+      .from("matches")
+      .select("id")
+      .eq("user_id", targetUserId)
+      .eq("target_user_id", userId)
+      .eq("action", "accept")
+      .maybeSingle();
+    isMutual = !!data;
+  }
+
+  return { error, isMutual };
 }
 
 export async function getMutualMatches(userId: string) {
