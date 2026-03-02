@@ -90,11 +90,6 @@ export default function HomeScreen() {
         {matchPopup && (
           <MatchPopup
             profile={matchPopup}
-            onMessage={() => {
-              const { openChat } = useAppStore.getState();
-              openChat(matchPopup.user_id);
-              setMatchPopup(null);
-            }}
             onClose={() => setMatchPopup(null)}
           />
         )}
@@ -103,7 +98,7 @@ export default function HomeScreen() {
   );
 }
 
-function MatchPopup({ profile, onMessage, onClose }: { profile: any; onMessage: () => void; onClose: () => void }) {
+function MatchPopup({ profile, onClose }: { profile: any; onClose: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -131,17 +126,11 @@ function MatchPopup({ profile, onMessage, onClose }: { profile: any; onMessage: 
         <div className="flex flex-col gap-3">
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={onMessage}
+            onClick={onClose}
             className="w-full py-3 btn-primary text-primary-foreground rounded-2xl text-sm font-bold cursor-pointer shadow-glow-sm border-none"
           >
-            Send a Message 💬
+            Keep Discovering 🔥
           </motion.button>
-          <button
-            onClick={onClose}
-            className="w-full py-3 bg-secondary text-muted-foreground rounded-2xl text-sm font-medium cursor-pointer border-none hover:text-foreground transition-colors"
-          >
-            Keep Swiping
-          </button>
         </div>
       </motion.div>
     </motion.div>
