@@ -89,15 +89,21 @@ export async function getDiscoverProfiles(currentUserId: string) {
   // Get current user interests
   const myInterests = await getUserInterests(currentUserId);
 
-  return (profiles || []).map((p: any) => {
+  const enriched = (profiles || []).map((p: any) => {
     const theirInterests = (allInterests || [])
       .filter((i: any) => i.user_id === p.user_id)
       .map((i: any) => i.interest_id);
     const shared = myInterests.filter((i) => theirInterests.includes(i));
     const total = Math.max(myInterests.length, theirInterests.length, 1);
     const matchScore = Math.round((shared.length / total) * 100);
-    return { ...p, interests: theirInterests, matchScore };
-  }).sort((a: any, b: any) => b.matchScore - a.matchScore);
+    return { ...p, interests: theirInterests, sharedCount: shared.length, matchScore };
+  });
+
+  // Prioritize profiles with at least 1 shared interest, then fallback to others
+  const withShared = enriched.filter((p: any) => p.sharedCount > 0).sort((a: any, b: any) => b.matchScore - a.matchScore);
+  const withoutShared = enriched.filter((p: any) => p.sharedCount === 0).sort(() => Math.random() - 0.5);
+
+  return [...withShared, ...withoutShared];
 }
 
 export async function swipeAction(targetUserId: string, action: "accept" | "reject") {
